@@ -46,6 +46,7 @@ def main():
     g.keymap.add(ord('W'),              lambda: g.active().mkdir())
     g.keymap.add(ord('W'),     'ctrl',  lambda: g.notebook.close())
     g.keymap.add(ord('R'),              lambda: g.active().rename())
+    g.keymap.add(ord('R'),     'ctrl',  lambda: g.active().rightclick())
     g.keymap.add(ord('D'),              lambda: g.active().trash())
     g.keymap.add(ord('C'),              lambda: g.active().copy())
     g.keymap.add(ord('M'),              lambda: g.active().move())
