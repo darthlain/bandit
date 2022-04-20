@@ -16,6 +16,11 @@ import platform
 from natsort import os_sorted
 import re
 
+if platform.system() == 'Windows':
+    shell32 = ctypes.windll.shell32
+    ole32   = ctypes.windll.ole32
+    mywin   = ctypes.CDLL("%s/win.dll" % Path(__file__).parent)
+
 # Pathを模倣する
 class SpPath(lib.Dummy):
 
@@ -33,8 +38,14 @@ class DirEntryWrapper:
         if isinstance(x, os.DirEntry):
             self.path = os.path.abspath(x.path)
             self.suffix = os.path.splitext(x.name)[1]
-            self.stat = x.stat()
-            self.size = self.stat.st_size
+
+            try:
+                self.stat = x.stat()
+                self.size = self.stat.st_size
+            except FileNotFoundError:
+                # TODO エラーが発生したファイルの色を変えたい
+                pass
+
         elif isinstance(x, pathlib.Path):
             self.path = str(x)
             self.suffix = x.suffix
@@ -311,11 +322,40 @@ class List(wx.Panel):
     def terminal(self):
         subprocess.run(lib.opencmd() + ' ' + g.shell, shell=True, cwd=self.path)
 
-    def winproperty(self):
-        ctypes.windll.shell32.SHObjectProperties(0, 2, self.linepath().path, None)
+    # winpropertyの代替
+    def winproperty1(self):
+        shell32.SHObjectProperties(0, 2, self.linepath().path, None)
 
-        # TODO 複数のファイルのプロパティを見る方法がわからない
-        #ctypes.windll.shell32.SHMultiFileProperties(['F:\\download\\'], 0)
+    def winproperty(self):
+        if self.selects == []:
+            n = 1
+            s = (ctypes.c_wchar_p * 1)()
+            s[0] = self.linepath().path
+        else:
+            n = len(self.selects)
+            s = (ctypes.c_wchar_p * n)()
+
+            for i in range(len(self.selects)):
+                s[i] = self.selects[i].path
+
+        mywin.multiproperties(s, n)
+
+    def rightclick(self):
+
+        s = os.path.dirname(self.linepath().path)
+
+        if self.selects == []:
+            n = 1
+            l = (ctypes.c_wchar_p * 1)()
+            l[0] = self.linepath().name
+        else:
+            n = len(self.selects)
+            l = (ctypes.c_wchar_p * n)()
+
+            for i in range(n):
+                l[i] = self.selects[i].name
+
+        mywin.rightclickmenu(s, l, n, g.frame.GetHandle())
 
     def goto(self):
         dlg = wx.TextEntryDialog(None, 'goto?')
